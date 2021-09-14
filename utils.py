@@ -1,6 +1,15 @@
 from eyed3 import load as eyed3_loader
 from eyed3.id3 import ID3_V2_3
 from urllib.request import urlopen
+from dotenv import load_dotenv
+from os import getenv as env
+from spotipy import Spotify
+from spotipy.oauth2 import SpotifyClientCredentials
+
+load_dotenv()
+
+spotify_client_id = env('SPOTIFY_CLIENT_ID')
+spotify_client_secret = env('SPOTIFY_CLIENT_SECRET')
 
 def hhmmss_to_minutes(t):
     l = list(map(int, t.split(':')))
@@ -19,3 +28,5 @@ def add_audio_meta(track_info, track_path):
     tag.recording_date = t['album']['release_date'][0:4]
     tag.images.set(3, urlopen(t['album']['images'][0]['url']).read() , 'image/jpeg', u'cover')
     tag.save(version=ID3_V2_3)
+
+spotify_instance = Spotify(client_credentials_manager=SpotifyClientCredentials(client_id=spotify_client_id, client_secret=spotify_client_secret))

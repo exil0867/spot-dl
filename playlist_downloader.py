@@ -1,5 +1,4 @@
 from spotipy import Spotify
-from spotipy.oauth2 import SpotifyClientCredentials
 from youtubesearchpython import VideosSearch
 from pytube import YouTube
 from pydub import AudioSegment
@@ -11,29 +10,15 @@ import requests
 from io import BytesIO
 from dotenv import load_dotenv
 from utils import hhmmss_to_minutes, add_audio_meta
+from utils import spotify_instance
 
 load_dotenv()
 
 folder_path = env('FOLDER_PATH')
-spotify_client_id = env('SPOTIFY_CLIENT_ID')
-spotify_client_secret = env('SPOTIFY_CLIENT_SECRET')
 
 download_path = path.join(path.dirname(__file__), folder_path)
 
-sp = Spotify(client_credentials_manager=SpotifyClientCredentials(client_id=spotify_client_id, client_secret=spotify_client_secret))
-
-def playlist_dl(spotify_playlist_url, youtube_duration_limit):
-    spotify_playlist = {}
-    try:
-        spotify_playlist = sp.playlist_tracks(spotify_playlist_url)
-        if not spotify_playlist['items']:
-            raise Exception('Error! Cannot download from an empty playlist.')
-    except Exception as e:
-        sys.exit(e)
-    track_list = spotify_playlist['items']
-    if spotify_playlist['next'] is not None:
-        track_list.extend(sp.next(spotify_playlist)['items'])
-    referencedict={}
+def playlist_dl(track_list, youtube_duration_limit):
     for i in track_list:
         t = i['track']
         search_query = t['artists'][0]['name'] + ' - ' + t['name'] + ' - ' + t['album']['name'] + ' Audio'
@@ -51,7 +36,7 @@ def playlist_dl(spotify_playlist_url, youtube_duration_limit):
                 break
         audio_buffer = BytesIO()
         try:
-            audio = YouTube(f'http://youtu.be/dsafasdf').streams.get_audio_only()
+            audio = YouTube(f'http://youtu.be/{choosen_video}').streams.get_audio_only()
             audio.stream_to_buffer(audio_buffer)
             file_path = path.join(download_path, t['artists'][0]['name'] + ' - ' + t['name'] + '.mp3')
         except Exception as e:

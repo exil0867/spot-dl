@@ -92,6 +92,7 @@ def playlist_deconstruct(spotify_playlist_url):
             state['spotify_response'].extend(spotify_instance.next(state['spotify_response'])['items'])
     except Exception as e:
         logging.error(e, exc_info=True)
+        return
     for i in state['spotify_response']['items']:
         state['new_list'].append(i['track'])
     try:

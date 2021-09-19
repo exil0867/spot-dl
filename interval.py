@@ -11,7 +11,8 @@ interval_duration = int(env('RUN_EVERY_MINUTES'))
 
 def run():
     track_list = playlist_deconstruct(spotify_playlist_url)
-    playlist_dl(track_list)
+    if track_list is not None:
+        playlist_dl(track_list)
 
 def listen_to_exceptions(event):
     if event.exception:

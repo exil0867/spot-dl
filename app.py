@@ -90,6 +90,7 @@ def playlist_deconstruct(spotify_playlist_url):
             return
     except Exception as e:
         logging.error(e, exc_info=True)
+        return
     if state['spotify_response']['next'] is not None:
         state['spotify_response'].extend(spotify_instance.next(state['spotify_response'])['items'])
     for i in state['spotify_response']['items']:

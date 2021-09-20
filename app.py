@@ -106,7 +106,7 @@ def playlist_deconstruct(spotify_playlist_url):
 
 def yt_lookup(track):
     t = track
-    search_query = t['artists'][0]['name'] + ' - ' + t['name'] + ' - ' + t['album']['name'] + ' Audio'
+    search_query = t['artists'][0]['name'] + ' - ' + t['name'] + ' Audio'
     search_result = None
     logging.info(f'Looking up {search_query} on Youtube...')
     try:

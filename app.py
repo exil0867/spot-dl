@@ -16,6 +16,7 @@ from urllib.request import urlopen
 from spotipy.oauth2 import SpotifyClientCredentials
 import json
 import logging
+from slugify import slugify
 
 load_dotenv()
 
@@ -31,6 +32,9 @@ spotify_instance = Spotify(client_credentials_manager=SpotifyClientCredentials(c
 
 logging.basicConfig(filename=log_path, level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
+def track_filename(t,):
+    return slugify(t['artists'][0]['name'] + ' - ' + t['name'], entities=False, decimal=False, hexadecimal=False, max_length=0, word_boundary=False, separator='_', save_order=False, stopwords=(), regex_pattern=None, lowercase=True, replacements=())
+
 def hhmmss_to_seconds(t):
     l = list(map(int, t.split(':')))
     return sum(n * sec for n, sec in zip(l[::-1], (1, 60, 3600)))
@@ -40,9 +44,8 @@ def cleanup(result, state):
         if i in state['new_list']:
             state['new_list'].remove(i)
     for i in state['removed']:
-        song_name = i['artists'][0]['name'] + ' - ' + i['name']
         try:
-            remove(path.join(download_path, song_name + '.mp3'))
+            remove(path.join(download_path, track_filename(i) + '.mp3'))
         except Exception as e:
             logging.error('Could not delete the song from the directory.', exc_info=True)
     try:
@@ -58,7 +61,7 @@ def playlist_diff(list1, list2):
             diff.append(i)
     return diff
 
-def add_audio_meta(track_info, track_path):
+def add_audio_meta(track_info, track_path, comment):
     try:
         t = track_info
         audio_file = eyed3_loader(track_path)
@@ -71,6 +74,7 @@ def add_audio_meta(track_info, track_path):
         tag.album_artist = t['album']['artists'][0]['name']
         tag.recording_date = t['album']['release_date'][0:4]
         tag.images.set(3, urlopen(t['album']['images'][0]['url']).read() , 'image/jpeg', u'cover')
+        tag.comments.set(comment)
         tag.save(version=ID3_V2_3)
     except Exception as e:
         logging.error(e, exc_info=True)
@@ -117,20 +121,31 @@ def yt_lookup(track):
         logging.error(f'Could not lookup videos on Youtube.', exc_info=True)
         return
     for i in search_result:
+        duration_comparison = 'close'
         video_duration = hhmmss_to_seconds(i['duration'])
         song_duration = t['duration_ms'] / 1000
+        duration_difference = abs(video_duration - song_duration)
+        def if_close(abs_tol):
+            return math.isclose(video_duration, song_duration, abs_tol=abs_tol)
         logging.info('Testing if {}: http://youtu.be/{} is an accurate result...'.format(i['title'], i['id']))
-        if not math.isclose(video_duration, song_duration, abs_tol = 90):
-            logging.info(f'Skipped a result item! The video and song durations are not close enough. The Spotify song is {song_duration} seconds, while the Youtube video is: {video_duration} seconds.')
-            continue
         if t['artists'][0]['name'].lower() not in i['title'].lower():
             logging.info('Skipped a result item! The video title does not contain the name of the artist, so it is probably not an accurate result.')
             continue
         if t['name'].lower() not in i['title'].lower():
             logging.info('The video title does not contain the name of the song, so it is probably not an accurate result.')
             continue
-        logging.info('Found an accurate result. {}: http://youtu.be/{}'.format(i['title'], i['id']))
-        return i['id']
+        if not if_close(90):
+            logging.info(f'Skipped a result item! The video and song durations are not close enough. The Spotify song is {song_duration} seconds, while the Youtube video is: {video_duration} seconds, with a difference of {duration_difference} seconds.')
+            continue
+        if if_close(4):
+            duration_comparison = 'super close'
+            logging.info(f'Found a {duration_comparison} result! The video and song durations are super close. The Spotify song is {song_duration} seconds, while the Youtube video is: {video_duration} seconds, with a difference of {duration_difference} seconds.')
+        else:
+            logging.info(f'Found a {duration_comparison} result! The video and song durations are super close. The Spotify song is {song_duration} seconds, while the Youtube video is: {video_duration} seconds, with a difference of {duration_difference} seconds.')
+        logging.info('Found a {} result. {}: http://youtu.be/{}'.format(duration_comparison, i['title'], i['id']))
+        return {
+            'id': i['id'], 'comment': f'Duration comparison between the downloaded song and the original: {duration_comparison} (Duration difference in seconds: {duration_difference} seconds). Downloaded from Youtube at: http://youtu.be/{i["id"]} ({i["title"]})'
+        }
 
 def playlist_dl(state):
     result = {
@@ -141,12 +156,14 @@ def playlist_dl(state):
         song_name = i['artists'][0]['name'] + ' - ' + i['name']
         logging.info(f'Downloading: {song_name}...')
         audio_buffer = BytesIO()
-        video_id = yt_lookup(i)
-        file_path = path.join(download_path, song_name + '.mp3')
-        if video_id == None:
+        yt_res = yt_lookup(i)
+        file_path = path.join(download_path, track_filename(i) + '.mp3')
+        if yt_res == None:
             logging.info('Could not find any results from Youtube.')
             result['fail_list'].append(i)
             continue
+        video_id = yt_res['id']
+        comment = yt_res['comment']
         try:
             audio = YouTube(f'http://youtu.be/{video_id}').streams.get_audio_only()
             audio.stream_to_buffer(audio_buffer)
@@ -157,7 +174,7 @@ def playlist_dl(state):
             continue
         try:
             AudioSegment.from_file(BytesIO(audio_buffer.getvalue())).export(file_path, format='mp3', bitrate='128k')
-            add_audio_meta(i, file_path)
+            add_audio_meta(i, file_path, comment)
             result['success_list'].append(i)
             logging.info('Exported the audio buffer as a file.')
         except Exception as e:

@@ -1,9 +1,10 @@
-pydub==0.25.1
 spotipy==2.19.0
-youtube_search_python==1.4.7
-requests==2.26.0
+pydub==0.25.1
 pytube==11.0.1
+requests==2.26.0
 APScheduler==3.7.0
+youtube_search_python==1.4.7
 eyed3==0.9.6
 python-dotenv==0.19.0
 tinydb==4.5.1
+unicode_slugify==0.1.3

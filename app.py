@@ -99,7 +99,6 @@ def playlist_deconstruct(spotify_playlist_url):
             state['spotify_response']['items'].extend(next_chunk['items'])
             playlist_chunk = next_chunk
             next = playlist_chunk['next']
-            print(len(state['spotify_response']['items']))
     except Exception as e:
         logging.error(e, exc_info=True)
         return

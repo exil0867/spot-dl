@@ -17,6 +17,7 @@ from spotipy.oauth2 import SpotifyClientCredentials
 import json
 import logging
 from slugify import slugify
+from copy import deepcopy
 
 load_dotenv()
 
@@ -92,8 +93,13 @@ def playlist_deconstruct(spotify_playlist_url):
         if not state['spotify_response']['items']:
             logging.info('Cannot download from an empty playlist.')
             return
-        if state['spotify_response']['next'] is not None:
-            state['spotify_response'].extend(spotify_instance.next(state['spotify_response'])['items'])
+        playlist_chunk = deepcopy(state['spotify_response'])
+        while playlist_chunk['next'] is not None:
+            next_chunk = spotify_instance.next(playlist_chunk)
+            state['spotify_response']['items'].extend(next_chunk['items'])
+            playlist_chunk = next_chunk
+            next = playlist_chunk['next']
+            print(len(state['spotify_response']['items']))
     except Exception as e:
         logging.error(e, exc_info=True)
         return

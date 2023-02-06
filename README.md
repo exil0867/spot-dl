@@ -7,7 +7,7 @@ This script is used to download songs from a Spotify playlist and convert them t
 
 Overall the script performs the following actions:
 - Authenticating to Spotify and retrieving the playlist tracks
-- Finding the songs on YouTube with the hell of a tiny algorithm i have implemented, then downloading them and converting them to mp3
+- Finding the songs on YouTube with the help of a tiny algorithm i have implemented, then downloading them and converting them to mp3
 - Adding metadata to the mp3 files
 - Updating the local playlist database and removing any removed songs from the playlist.
 
